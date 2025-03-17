@@ -15,7 +15,7 @@
             </a>
         </nav>
 
-        <div class="max-w-2xl mx-auto">
+        <div class="max-w-4xl mx-auto">
             <h1 class="text-3xl font-bold mb-8">Генерация документа</h1>
 
             <!-- Счетчик оставшихся запросов -->
@@ -26,76 +26,262 @@
                 </p>
             </div>
 
-            <!-- Форма генерации -->
-            <form id="generateForm" class="space-y-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Шаблон документа
-                    </label>
-                    <select id="template" name="template" required
-                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
-                        <option value="">Выберите шаблон...</option>
-                    </select>
+            <!-- Вкладки -->
+            <div class="mb-8">
+                <div class="border-b border-gray-200">
+                    <nav class="-mb-px flex">
+                        <button onclick="switchTab('generate')" 
+                                class="tab-button active mr-8 py-4 px-1 border-b-2 font-medium text-sm"
+                                data-tab="generate">
+                            <i class="fas fa-file-alt mr-2"></i>Генерация
+                        </button>
+                        <button onclick="switchTab('templates')" 
+                                class="tab-button mr-8 py-4 px-1 border-b-2 font-medium text-sm"
+                                data-tab="templates">
+                            <i class="fas fa-cog mr-2"></i>Управление шаблонами
+                        </button>
+                    </nav>
                 </div>
+            </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Данные для документа (JSON)
-                    </label>
-                    <textarea id="context" name="context" rows="10" required
-                              class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                              placeholder='{
+            <!-- Форма генерации -->
+            <div id="generateTab" class="tab-content">
+                <form id="generateForm" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Шаблон документа
+                        </label>
+                        <select id="template" name="template" required
+                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
+                            <option value="">Выберите шаблон...</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Данные для документа (JSON)
+                        </label>
+                        <textarea id="context" name="context" rows="10" required
+                                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                  placeholder='{
     "contract_number": "12345/2025",
     "city": "Москва",
     "company_name": "ООО Рога и Копыта",
     "representative": "Иванов И.И.",
     ...
 }'></textarea>
+                    </div>
+
+                    <div>
+                        <button type="submit"
+                                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Сгенерировать документ
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Результат -->
+                <div id="result" class="mt-8 hidden">
+                    <h2 class="text-xl font-semibold mb-4">Сгенерированный документ:</h2>
+                    <div class="bg-white p-6 rounded-lg shadow-lg">
+                        <pre id="documentContent" class="whitespace-pre-wrap"></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Управление шаблонами -->
+            <div id="templatesTab" class="tab-content hidden">
+                <!-- Загрузка нового шаблона -->
+                <div class="bg-white p-6 rounded-lg shadow-lg mb-8">
+                    <h3 class="text-lg font-semibold mb-4">Загрузить новый шаблон</h3>
+                    <form id="uploadTemplateForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Название шаблона
+                            </label>
+                            <input type="text" id="templateName" name="templateName" required
+                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                   placeholder="например: contract.md">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Содержимое шаблона (Markdown)
+                            </label>
+                            <textarea id="templateContent" name="templateContent" rows="10" required
+                                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                      placeholder="# Договор № {{ contract_number }}
+
+Город {{ city }}                          Дата {{ date }}
+
+{{ company_name }}, в лице {{ representative }}, действующего на основании Устава..."></textarea>
+                        </div>
+                        <div>
+                            <button type="submit"
+                                    class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                <i class="fas fa-upload mr-2"></i>Загрузить шаблон
+                            </button>
+                        </div>
+                    </form>
                 </div>
 
-                <div>
-                    <button type="submit"
-                            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        Сгенерировать документ
-                    </button>
-                </div>
-            </form>
-
-            <!-- Результат -->
-            <div id="result" class="mt-8 hidden">
-                <h2 class="text-xl font-semibold mb-4">Сгенерированный документ:</h2>
+                <!-- Список существующих шаблонов -->
                 <div class="bg-white p-6 rounded-lg shadow-lg">
-                    <pre id="documentContent" class="whitespace-pre-wrap"></pre>
+                    <h3 class="text-lg font-semibold mb-4">Существующие шаблоны</h3>
+                    <div id="templatesList" class="space-y-4">
+                        <!-- Шаблоны будут добавлены через JavaScript -->
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        const API_URL = 'https://ivantech123.github.io/legal-docs-gpt-generator/api'; // Используем тот же домен
+        const API_URL = 'https://ivantech123.github.io/legal-docs-gpt-generator/api';
+        let templates = [];
+
+        // Переключение вкладок
+        function switchTab(tabName) {
+            // Скрываем все вкладки
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            
+            // Показываем нужную вкладку
+            document.getElementById(tabName + 'Tab').classList.remove('hidden');
+            
+            // Обновляем стили кнопок
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('border-indigo-500', 'text-indigo-600');
+                button.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+            });
+            
+            const activeButton = document.querySelector(`[data-tab="${tabName}"]`);
+            activeButton.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+            activeButton.classList.add('border-indigo-500', 'text-indigo-600');
+        }
 
         // Загружаем список шаблонов
         async function loadTemplates() {
             try {
-                const response = await fetch(`${API_URL}/templates`);
+                const response = await fetch(`${API_URL}/templates.json`);
                 const data = await response.json();
-                const select = document.getElementById('template');
+                templates = data.templates;
                 
-                data.templates.forEach(template => {
+                // Обновляем select в форме генерации
+                const select = document.getElementById('template');
+                select.innerHTML = '<option value="">Выберите шаблон...</option>';
+                
+                templates.forEach(template => {
                     const option = document.createElement('option');
                     option.value = template;
                     option.textContent = template;
                     select.appendChild(option);
                 });
+                
+                // Обновляем список шаблонов
+                const templatesList = document.getElementById('templatesList');
+                templatesList.innerHTML = '';
+                
+                for (const template of templates) {
+                    // Загружаем информацию о шаблоне
+                    const templateResponse = await fetch(`${API_URL}/template_${template}.json`);
+                    const templateData = await templateResponse.json();
+                    
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center justify-between p-4 bg-gray-50 rounded-lg';
+                    div.innerHTML = `
+                        <div class="flex items-center">
+                            <i class="fas fa-file-alt text-gray-400 mr-3"></i>
+                            <span class="font-medium">${template}</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="editTemplate('${template}')"
+                                    class="text-blue-600 hover:text-blue-800">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteTemplate('${template}')"
+                                    class="text-red-600 hover:text-red-800">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    
+                    // Добавляем информацию о переменных
+                    if (templateData.variables && Object.keys(templateData.variables).length > 0) {
+                        const variablesDiv = document.createElement('div');
+                        variablesDiv.className = 'mt-2 text-sm text-gray-600';
+                        variablesDiv.innerHTML = `
+                            <div class="font-medium">Переменные:</div>
+                            <div class="grid grid-cols-2 gap-2 mt-1">
+                                ${Object.entries(templateData.variables).map(([key, desc]) => `
+                                    <div class="col-span-1">${key}</div>
+                                    <div class="col-span-1 text-gray-500">${desc}</div>
+                                `).join('')}
+                            </div>
+                        `;
+                        div.appendChild(variablesDiv);
+                    }
+                    
+                    templatesList.appendChild(div);
+                }
             } catch (error) {
                 console.error('Error loading templates:', error);
             }
         }
 
+        // Редактирование шаблона
+        async function editTemplate(templateName) {
+            try {
+                const response = await fetch(`${API_URL}/template_${templateName}.json`);
+                const data = await response.json();
+                
+                document.getElementById('templateName').value = data.name;
+                document.getElementById('templateContent').value = data.content;
+                
+                // Переключаемся на вкладку управления шаблонами
+                switchTab('templates');
+                
+                // Прокручиваем к форме
+                document.getElementById('uploadTemplateForm').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                console.error('Error loading template:', error);
+                alert('Ошибка при загрузке шаблона');
+            }
+        }
+
+        // Обработка отправки формы генерации
+        document.getElementById('generateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const templateName = document.getElementById('template').value;
+            const contextStr = document.getElementById('context').value;
+            
+            try {
+                const context = JSON.parse(contextStr);
+                
+                // Загружаем шаблон
+                const templateResponse = await fetch(`${API_URL}/template_${templateName}.json`);
+                const templateData = await templateResponse.json();
+                
+                // Заменяем переменные в шаблоне
+                let document = templateData.content;
+                for (const [key, value] of Object.entries(context)) {
+                    document = document.replace(new RegExp(`{{\\s*${key}\\s*}}`, 'g'), value);
+                }
+                
+                // Показываем результат
+                document.getElementById('result').classList.remove('hidden');
+                document.getElementById('documentContent').textContent = document;
+                
+            } catch (error) {
+                alert('Ошибка: ' + error.message);
+            }
+        });
+
         // Загружаем количество оставшихся запросов
         async function loadRemainingRequests() {
             try {
-                const response = await fetch(`${API_URL}/requests/remaining`);
+                const response = await fetch(`${API_URL}/remaining.json`);
                 const data = await response.json();
                 document.getElementById('requestsRemaining').textContent = data.remaining;
             } catch (error) {
@@ -103,40 +289,23 @@
             }
         }
 
-        // Обработка отправки формы
-        document.getElementById('generateForm').addEventListener('submit', async (e) => {
+        // Загрузка шаблона
+        document.getElementById('uploadTemplateForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const template = document.getElementById('template').value;
-            const contextStr = document.getElementById('context').value;
+            const name = document.getElementById('templateName').value;
+            const content = document.getElementById('templateContent').value;
             
-            try {
-                const context = JSON.parse(contextStr);
-                
-                const response = await fetch(`${API_URL}/generate`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        template_name: template,
-                        context: context
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    document.getElementById('result').classList.remove('hidden');
-                    document.getElementById('documentContent').textContent = data.document;
-                    document.getElementById('requestsRemaining').textContent = data.requests_remaining;
-                } else {
-                    alert(data.detail || 'Произошла ошибка при генерации документа');
-                }
-            } catch (error) {
-                alert('Ошибка: ' + error.message);
-            }
+            // В реальном приложении здесь был бы запрос к API
+            // Сейчас просто показываем уведомление
+            alert('В демо-версии загрузка шаблонов недоступна');
         });
+
+        // Удаление шаблона
+        async function deleteTemplate(templateName) {
+            // В реальном приложении здесь был бы запрос к API
+            alert('В демо-версии удаление шаблонов недоступно');
+        }
 
         // Инициализация
         loadTemplates();

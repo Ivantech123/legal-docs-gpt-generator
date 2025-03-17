@@ -35,18 +35,25 @@ jobs:
         uses: actions/configure-pages@v4
 
       - name: Build API static files
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           mkdir -p docs/api
           python -c '
           import json
+          import os
           from generate_docs import DocumentGenerator
           import yaml
 
-          # Создаем заглушки для API эндпоинтов
+          # Загружаем конфигурацию
+          with open("config.yml", "r", encoding="utf-8") as f:
+              config = yaml.safe_load(f)
+
+          # Создаем данные для API эндпоинтов
           api_data = {
               "templates": {
                   "path": "api/templates.json",
-                  "data": {"templates": ["contract.md", "agreement.md"]}
+                  "data": {"templates": [doc["template"] for doc in config["documents"]]}
               },
               "remaining": {
                   "path": "api/remaining.json",
@@ -54,10 +61,28 @@ jobs:
               }
           }
 
+          # Добавляем содержимое каждого шаблона
+          for doc in config["documents"]:
+              template_name = doc["template"]
+              template_path = os.path.join("templates", template_name)
+              
+              if os.path.exists(template_path):
+                  with open(template_path, "r", encoding="utf-8") as f:
+                      template_content = f.read()
+                  
+                  api_data[f"template_{template_name}"] = {
+                      "path": f"api/template_{template_name}.json",
+                      "data": {
+                          "name": template_name,
+                          "content": template_content,
+                          "variables": doc.get("variables", {})
+                      }
+                  }
+
           # Сохраняем данные в JSON файлы
           for endpoint, info in api_data.items():
-              with open(f"docs/{info['path']}", "w", encoding='utf-8') as f:
-                  json.dump(info['data'], f, ensure_ascii=False, indent=2)
+              with open(f"docs/{info['path']}", "w", encoding="utf-8") as f:
+                  json.dump(info["data"], f, ensure_ascii=False, indent=2)
           '
 
       - name: Upload artifact
