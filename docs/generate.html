@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Генерация документов - Legal Docs GPT Generator</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8">
+        <nav class="mb-8">
+            <a href="index.html" class="text-indigo-600 hover:text-indigo-800">
+                <i class="fas fa-arrow-left mr-2"></i>Вернуться на главную
+            </a>
+        </nav>
+
+        <div class="max-w-2xl mx-auto">
+            <h1 class="text-3xl font-bold mb-8">Генерация документа</h1>
+
+            <!-- Счетчик оставшихся запросов -->
+            <div class="bg-blue-100 p-4 rounded-lg mb-8">
+                <p class="text-blue-800">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Осталось запросов на сегодня: <span id="requestsRemaining">...</span>
+                </p>
+            </div>
+
+            <!-- Форма генерации -->
+            <form id="generateForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Шаблон документа
+                    </label>
+                    <select id="template" name="template" required
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
+                        <option value="">Выберите шаблон...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Данные для документа (JSON)
+                    </label>
+                    <textarea id="context" name="context" rows="10" required
+                              class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                              placeholder='{
+    "contract_number": "12345/2025",
+    "city": "Москва",
+    "company_name": "ООО Рога и Копыта",
+    "representative": "Иванов И.И.",
+    ...
+}'></textarea>
+                </div>
+
+                <div>
+                    <button type="submit"
+                            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Сгенерировать документ
+                    </button>
+                </div>
+            </form>
+
+            <!-- Результат -->
+            <div id="result" class="mt-8 hidden">
+                <h2 class="text-xl font-semibold mb-4">Сгенерированный документ:</h2>
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <pre id="documentContent" class="whitespace-pre-wrap"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Загружаем список шаблонов
+        async function loadTemplates() {
+            try {
+                const response = await fetch('http://localhost:8000/templates');
+                const data = await response.json();
+                const select = document.getElementById('template');
+                
+                data.templates.forEach(template => {
+                    const option = document.createElement('option');
+                    option.value = template;
+                    option.textContent = template;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading templates:', error);
+            }
+        }
+
+        // Загружаем количество оставшихся запросов
+        async function loadRemainingRequests() {
+            try {
+                const response = await fetch('http://localhost:8000/requests/remaining');
+                const data = await response.json();
+                document.getElementById('requestsRemaining').textContent = data.remaining;
+            } catch (error) {
+                console.error('Error loading remaining requests:', error);
+            }
+        }
+
+        // Обработка отправки формы
+        document.getElementById('generateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const template = document.getElementById('template').value;
+            const contextStr = document.getElementById('context').value;
+            
+            try {
+                const context = JSON.parse(contextStr);
+                
+                const response = await fetch('http://localhost:8000/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        template_name: template,
+                        context: context
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('result').classList.remove('hidden');
+                    document.getElementById('documentContent').textContent = data.document;
+                    document.getElementById('requestsRemaining').textContent = data.requests_remaining;
+                } else {
+                    alert(data.detail || 'Произошла ошибка при генерации документа');
+                }
+            } catch (error) {
+                alert('Ошибка: ' + error.message);
+            }
+        });
+
+        // Инициализация
+        loadTemplates();
+        loadRemainingRequests();
+        setInterval(loadRemainingRequests, 60000); // Обновляем счетчик каждую минуту
+    </script>
+</body>
+</html>
