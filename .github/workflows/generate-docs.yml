@@ -1,11 +1,17 @@
-name: Generate Legal Documents
+name: Generate Legal Documents and Deploy Pages
 
 on:
   push:
     paths:
       - 'templates/**'
       - 'config.yml'
+      - 'docs/**'
   workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
   generate:
@@ -36,3 +42,23 @@ jobs:
         git add docs/
         git commit -m "Update generated documents" || echo "No changes to commit"
         git push
+
+  deploy:
+    needs: generate
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+    
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: './docs'
+    
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
