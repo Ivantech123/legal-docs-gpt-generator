@@ -6,6 +6,7 @@ import redis
 import yaml
 from generate_docs import DocumentGenerator
 import json
+import os
 
 app = FastAPI()
 
@@ -18,8 +19,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Подключаемся к Redis для отслеживания количества запросов
-redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+# Подключаемся к Redis
+REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
+redis_client = redis.Redis(host=REDIS_HOST, port=6379, db=0, decode_responses=True)
 
 class DocumentRequest(BaseModel):
     template_name: str
@@ -33,19 +35,23 @@ def get_daily_requests_key():
 def increment_daily_requests():
     """Увеличиваем счетчик запросов за день"""
     key = get_daily_requests_key()
-    current = redis_client.get(key)
-    
-    if current is None:
-        # Если это первый запрос за день, устанавливаем счетчик
-        redis_client.setex(key, 86400, 1)  # TTL: 24 часа
+    try:
+        current = redis_client.get(key)
+        
+        if current is None:
+            # Если это первый запрос за день, устанавливаем счетчик
+            redis_client.setex(key, 86400, 1)  # TTL: 24 часа
+            return 1
+        
+        current = int(current)
+        if current >= 50:
+            raise HTTPException(status_code=429, detail="Превышен лимит запросов на сегодня (50)")
+        
+        redis_client.incr(key)
+        return current + 1
+    except redis.ConnectionError:
+        # Если Redis недоступен, пропускаем проверку
         return 1
-    
-    current = int(current)
-    if current >= 50:
-        raise HTTPException(status_code=429, detail="Превышен лимит запросов на сегодня (50)")
-    
-    redis_client.incr(key)
-    return current + 1
 
 @app.post("/generate")
 async def generate_document(request: DocumentRequest):
@@ -80,7 +86,11 @@ async def list_templates():
 @app.get("/requests/remaining")
 async def get_remaining_requests():
     """Получаем количество оставшихся запросов на сегодня"""
-    key = get_daily_requests_key()
-    current = redis_client.get(key)
-    used = int(current) if current else 0
-    return {"remaining": 50 - used}
+    try:
+        key = get_daily_requests_key()
+        current = redis_client.get(key)
+        used = int(current) if current else 0
+        return {"remaining": 50 - used}
+    except redis.ConnectionError:
+        # Если Redis недоступен, возвращаем максимальное количество
+        return {"remaining": 50}

@@ -1,0 +1,89 @@
+name: Deploy API
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Deploy to Digital Ocean
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            # Остановить и удалить старые контейнеры
+            docker-compose down
+            
+            # Очистить неиспользуемые образы
+            docker system prune -f
+            
+            # Обновить docker-compose.yml
+            cat > docker-compose.yml << 'EOL'
+            version: '3.8'
+            
+            services:
+              api:
+                image: ghcr.io/${{ github.repository }}:main
+                ports:
+                  - "8000:8000"
+                environment:
+                  - REDIS_HOST=redis
+                  - OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+                depends_on:
+                  - redis
+            
+              redis:
+                image: redis:alpine
+                ports:
+                  - "6379:6379"
+                volumes:
+                  - redis_data:/data
+            
+            volumes:
+              redis_data:
+            EOL
+            
+            # Запустить новые контейнеры
+            docker-compose up -d

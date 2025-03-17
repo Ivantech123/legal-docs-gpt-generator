@@ -72,10 +72,12 @@
     </div>
 
     <script>
+        const API_URL = 'https://api.legal-docs-generator.com'; // Замените на ваш домен
+
         // Загружаем список шаблонов
         async function loadTemplates() {
             try {
-                const response = await fetch('http://localhost:8000/templates');
+                const response = await fetch(`${API_URL}/templates`);
                 const data = await response.json();
                 const select = document.getElementById('template');
                 
@@ -93,7 +95,7 @@
         // Загружаем количество оставшихся запросов
         async function loadRemainingRequests() {
             try {
-                const response = await fetch('http://localhost:8000/requests/remaining');
+                const response = await fetch(`${API_URL}/requests/remaining`);
                 const data = await response.json();
                 document.getElementById('requestsRemaining').textContent = data.remaining;
             } catch (error) {
@@ -111,7 +113,7 @@
             try {
                 const context = JSON.parse(contextStr);
                 
-                const response = await fetch('http://localhost:8000/generate', {
+                const response = await fetch(`${API_URL}/generate`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
