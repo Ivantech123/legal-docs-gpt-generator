@@ -1,0 +1,38 @@
+name: Generate Legal Documents
+
+on:
+  push:
+    paths:
+      - 'templates/**'
+      - 'config.yml'
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Generate documents
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: python generate_docs.py
+    
+    - name: Commit generated documents
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add docs/
+        git commit -m "Update generated documents" || echo "No changes to commit"
+        git push
